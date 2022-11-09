@@ -1,0 +1,189 @@
+# oplossing-opdracht2.yml
+# =======================
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Oplossing opdracht 2"
+
+Parameters:
+
+  Name:
+    Type: String
+    Default: frederique
+  WordpressUserName:
+    Type: String
+    Default: '---vul-hier-het-user-id-van-de-database-in---'
+  WordpressPassword:
+    Type: String
+    Default: '---vul-hier-het-password-van-de-database-in---'
+    NoEcho: true
+  WordpressEndpoint:
+    Type: String
+    Default: '---vul-hier-het-ip-adres-van-de-database-in---'
+
+  EC2InstanceType:
+    Description: Instance type for EC2 
+    Type: String
+    Default: t2.micro
+  EC2KeyName:
+    Description: Key name for EC2 
+    Type: String
+    Default: frederiquer-20221102
+
+  AmazonLinux2AMI: 
+    Description: Amazon Linux AMI
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-ebs
+
+Resources:
+
+  WordPressVpc:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: 10.0.0.0/16
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpressvpc-${Name}"
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "InternetGateway-${Name}"
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref WordPressVpc
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "PublicRouteTable-${Name}"
+      VpcId: !Ref WordPressVpc
+  PublicRoutePublicInternet:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetAZa:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Sub "${AWS::Region}a"
+      CidrBlock: 10.0.0.0/24
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref WordPressVpc
+      Tags:
+        - Key: Name
+          Value: !Sub "PublicSubnetAZa-${Name}"
+  PublicSubnetAZaRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetAZa
+
+  PublicSubnetAZb:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Sub "${AWS::Region}b"
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref WordPressVpc
+      Tags:
+        - Key: Name
+          Value: !Sub "PublicSubnetAZb-${Name}"
+  PublicSubnetAZbRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetAZb
+
+  EC2WordpressSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: EC2WordpressSecurityGroup
+      GroupDescription: !Sub "Securitygroup-${Name}"
+      VpcId: !Ref WordPressVpc
+      Tags:
+        - Key: Name
+          Value: !Sub "SecurityGroup-${Name}"
+
+  EC2WordpressSecurityGroupIngressSSH:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EC2WordpressSecurityGroup
+      CidrIp: 0.0.0.0/0      
+      Description: SSH
+      FromPort: 22
+      ToPort: 22
+      IpProtocol: TCP
+
+  EC2WordpressSecurityGroupIngressHTTP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EC2WordpressSecurityGroup
+      CidrIp: 0.0.0.0/0      
+      Description: SSH
+      FromPort: 80
+      ToPort: 80
+      IpProtocol: TCP
+
+  EC2WordPress:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmazonLinux2AMI 
+      InstanceType: !Ref EC2InstanceType
+      KeyName: !Ref EC2KeyName
+      SubnetId: !Ref PublicSubnetAZa   
+      Tags:
+        - Key: Name
+          Value: !Sub "EC2Wordpress-${Name}" 
+      SecurityGroupIds:
+        - !Ref EC2WordpressSecurityGroup
+      UserData: 
+        "Fn::Base64": !Sub |
+            #!/bin/bash
+
+            export WORDPRESS_DATABASE_NAME="wp_database_${Name}"
+            export WORDPRESS_USERNAME="${WordpressUserName}"
+            export WORDPRESS_PASSWORD="${WordpressPassword}"
+            export WORDPRESS_DATABASE_SERVER_ENDPOINT="${WordpressEndpoint}"
+
+            export WWW_DIR="/var/www/html"
+
+            yum update -y
+
+            echo "TRACE Install tar, http and mariadb"
+            curl https://frpublic2.s3.eu-west-1.amazonaws.com/Xforce/Code/install_tar_http_mariadb.sh -o ~/install_tar_http_mariadb.sh
+            . ~/install_tar_http_mariadb.sh
+
+            echo "TRACE Download WordPress in /opt/wordpress"
+            curl https://frpublic2.s3.eu-west-1.amazonaws.com/Xforce/Code/download_wordpress_in_opt_wordpress.sh -o ~/download_wordpress_in_opt_wordpress.sh
+            . ~/download_wordpress_in_opt_wordpress.sh
+
+            echo "TRACE Install PHP 8"
+            curl https://frpublic2.s3.eu-west-1.amazonaws.com/Xforce/Code/install_php8.sh -o ~/install_php8.sh
+            . ~/install_php8.sh
+
+            echo "TRACE Change config file"
+            curl https://frpublic2.s3.eu-west-1.amazonaws.com/Xforce/Code/change_wordpress_config_file.sh -o ~/change_wordpress_config_file.sh
+            cd /opt/wordpress
+            . ~/change_wordpress_config_file.sh
+            cd /root
+
+            echo "TRACE Create database"
+            curl https://frpublic2.s3.eu-west-1.amazonaws.com/Xforce/Code/create_database.sh -o ~/create_database.sh
+            . ~/create_database.sh
+
+            echo "TRACE Copy files and start httpd"
+            cp -p -r /opt/wordpress/* $WWW_DIR
+            systemctl enable --now httpd
+
+Outputs:
+  WordpressPublicIP:
+    Description: Public IP Address WordPress
+    Value: !Sub "Public IP Address: ${EC2WordPress.PublicIp}"

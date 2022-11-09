@@ -1,0 +1,35 @@
+# opdracht2.yml
+# =============
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Oplossing opdracht 2"
+
+Parameters:
+
+  Name:
+    Type: String
+    Default: frederique
+  WordpressUserName:
+    Type: String
+    Default: '---vul-hier-het-user-id-van-de-database-in---'
+  WordpressPassword:
+    Type: String
+    Default: '---vul-hier-het-password-van-de-database-in---'
+    NoEcho: true
+  WordpressEndpoint:
+    Type: String
+    Default: '---vul-hier-het-ip-adres-van-de-database-in---'
+
+  EC2InstanceType:
+    Description: Instance type for EC2 
+    Type: String
+    Default: t2.micro
+  EC2KeyName:
+    Description: Key name for EC2 
+    Type: String
+    Default: frederiquer-20221102
+
+  AmazonLinux2AMI: 
+    Description: Amazon Linux AMI
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-ebs

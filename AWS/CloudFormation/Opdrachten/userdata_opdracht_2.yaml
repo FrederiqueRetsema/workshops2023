@@ -1,0 +1,38 @@
+      UserData: 
+        "Fn::Base64": !Sub |
+            #!/bin/bash
+
+            export WORDPRESS_DATABASE_NAME="wp_database_${Name}"
+            export WORDPRESS_USERNAME="${WordpressUserName}"
+            export WORDPRESS_PASSWORD="${WordpressPassword}"
+            export WORDPRESS_DATABASE_SERVER_ENDPOINT="${WordpressEndpoint}"
+
+            export WWW_DIR="/var/www/html"
+
+            yum update -y
+
+            echo "TRACE Install tar, http and mariadb"
+            curl https://frpublic2.s3.eu-west-1.amazonaws.com/Xforce/Code/install_tar_http_mariadb.sh -o ~/install_tar_http_mariadb.sh
+            . ~/install_tar_http_mariadb.sh
+
+            echo "TRACE Download WordPress in /opt/wordpress"
+            curl https://frpublic2.s3.eu-west-1.amazonaws.com/Xforce/Code/download_wordpress_in_opt_wordpress.sh -o ~/download_wordpress_in_opt_wordpress.sh
+            . ~/download_wordpress_in_opt_wordpress.sh
+
+            echo "TRACE Install PHP 8"
+            curl https://frpublic2.s3.eu-west-1.amazonaws.com/Xforce/Code/install_php8.sh -o ~/install_php8.sh
+            . ~/install_php8.sh
+
+            echo "TRACE Change config file"
+            curl https://frpublic2.s3.eu-west-1.amazonaws.com/Xforce/Code/change_wordpress_config_file.sh -o ~/change_wordpress_config_file.sh
+            cd /opt/wordpress
+            . ~/change_wordpress_config_file.sh
+            cd /root
+
+            echo "TRACE Create database"
+            curl https://frpublic2.s3.eu-west-1.amazonaws.com/Xforce/Code/create_database.sh -o ~/create_database.sh
+            . ~/create_database.sh
+
+            echo "TRACE Copy files and start httpd"
+            cp -p -r /opt/wordpress/* $WWW_DIR
+            systemctl enable --now httpd

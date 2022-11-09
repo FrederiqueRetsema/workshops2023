@@ -1,0 +1,5 @@
+Resources:
+  HelloBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: "demobucket20230101"

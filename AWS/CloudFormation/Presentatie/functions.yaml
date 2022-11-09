@@ -1,0 +1,16 @@
+Parameters:
+  BucketNameParameter:
+    Type: String
+    Default: "demobucket20230101"
+Resources:
+  HelloBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Ref BucketNameParameter
+Outputs:
+  BucketArn:
+    Description: Bucket ARN using Join and GetAtt
+    Value: !Join ["", ["This is the bucket name: ", !Ref HelloBucket, ", with ARN: ", !GetAtt HelloBucket.Arn]]
+  BucketArn2:
+    Description: Bucket ARN using Sub
+    Value: !Sub "This is the bucket name: ${HelloBucket}, with ARN: ${HelloBucket.Arn}"
