@@ -42,14 +42,14 @@ Resources:
       CidrBlock: 10.0.0.0/16
       Tags:
         - Key: Name
-          Value: !Sub "wordpressvpc-${Name}"
+          Value: !Sub "wordpress-vpc-${Name}"
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub "InternetGateway-${Name}"
+          Value: !Sub "wordpress-igw-${Name}"
   InternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
@@ -61,7 +61,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub "PublicRouteTable-${Name}"
+          Value: !Sub "wordpress-public-routetable-${Name}"
       VpcId: !Ref WordPressVpc
   PublicRoutePublicInternet:
     Type: AWS::EC2::Route
@@ -79,7 +79,7 @@ Resources:
       VpcId: !Ref WordPressVpc
       Tags:
         - Key: Name
-          Value: !Sub "PublicSubnetAZa-${Name}"
+          Value: !Sub "wordpress-public-subnet-aza-${Name}"
   PublicSubnetAZaRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -95,7 +95,7 @@ Resources:
       VpcId: !Ref WordPressVpc
       Tags:
         - Key: Name
-          Value: !Sub "PublicSubnetAZb-${Name}"
+          Value: !Sub "wordpress-public-subnet-azb-${Name}"
   PublicSubnetAZbRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -106,11 +106,11 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: EC2WordpressSecurityGroup
-      GroupDescription: !Sub "Securitygroup-${Name}"
+      GroupDescription: !Sub "wordpress-sg-${Name}"
       VpcId: !Ref WordPressVpc
       Tags:
         - Key: Name
-          Value: !Sub "SecurityGroup-${Name}"
+          Value: !Sub "wordpress-sg-${Name}"
 
   EC2WordpressSecurityGroupIngressSSH:
     Type: AWS::EC2::SecurityGroupIngress
@@ -141,7 +141,7 @@ Resources:
       SubnetId: !Ref PublicSubnetAZa   
       Tags:
         - Key: Name
-          Value: !Sub "EC2Wordpress-${Name}" 
+          Value: !Sub "wordpress-ec2instance-${Name}" 
       SecurityGroupIds:
         - !Ref EC2WordpressSecurityGroup
       UserData: 

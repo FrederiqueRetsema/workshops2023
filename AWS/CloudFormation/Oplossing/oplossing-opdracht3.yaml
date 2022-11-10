@@ -39,14 +39,14 @@ Resources:
       CidrBlock: 10.0.0.0/16
       Tags:
         - Key: Name
-          Value: !Sub "wordpressvpc-${Name}"
+          Value: !Sub "wordpress-vpc-${Name}"
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub "InternetGateway-${Name}"
+          Value: !Sub "wordpress-igw-${Name}"
   InternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
@@ -58,7 +58,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub "PublicRouteTable-${Name}"
+          Value: !Sub "wordpress-public-routetable-${Name}"
       VpcId: !Ref WordPressVpc
   PublicRoutePublicInternet:
     Type: AWS::EC2::Route
@@ -76,7 +76,7 @@ Resources:
       VpcId: !Ref WordPressVpc
       Tags:
         - Key: Name
-          Value: !Sub "PublicSubnetAZa-${Name}"
+          Value: !Sub "wordpress-public-subnet-aza-${Name}"
   PublicSubnetAZaRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -92,7 +92,7 @@ Resources:
       VpcId: !Ref WordPressVpc
       Tags:
         - Key: Name
-          Value: !Sub "PublicSubnetAZb-${Name}"
+          Value: !Sub "wordpress-public-subnet-azb-${Name}"
   PublicSubnetAZbRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -102,12 +102,12 @@ Resources:
   EC2WordpressSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: EC2WordpressSecurityGroup
-      GroupDescription: !Sub "Securitygroup-${Name}"
+      GroupName: !Sub "wordpress-sg-${Name}"
+      GroupDescription: !Sub "wordpress-sg-${Name}"
       VpcId: !Ref WordPressVpc
       Tags:
         - Key: Name
-          Value: !Sub "SecurityGroup-${Name}"
+          Value: !Sub "wordpress-sg-${Name}"
 
   EC2WordpressSecurityGroupIngressSSH:
     Type: AWS::EC2::SecurityGroupIngress
@@ -129,21 +129,27 @@ Resources:
       ToPort: 80
       IpProtocol: TCP
 
-  WordPressDatabaseSubnetGroup:
+  WordPressDBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
-      DBSubnetGroupDescription: !Sub "DatabaseSubnetGroup-${Name}"
-      DBSubnetGroupName: !Sub "DatabaseSubnetGroup-${Name}"
+      DBSubnetGroupDescription: !Sub "wordpress-dbsubnetgroup-${Name}"
+      DBSubnetGroupName: !Sub "wordpress-dbsubnetgroup-${Name}"
       SubnetIds:
         - !Ref PublicSubnetAZa
         - !Ref PublicSubnetAZb
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpress-dbsubnetgroup-${Name}"
 
   WordPressDBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: WordPressDBSecurityGroup
-      GroupDescription: Securitygroup for the database
+      GroupName: !Sub "wordpress-dbsg-${Name}"
+      GroupDescription: !Sub "wordpress-dbsg-${Name}"
       VpcId: !Ref WordPressVpc
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpress-dbsg-${Name}"
 
   DatabaseSecurityGroupIngress:
     Type: AWS::EC2::SecurityGroupIngress
@@ -162,8 +168,8 @@ Resources:
     Properties:
       BackupRetentionPeriod: 7
       DatabaseName: !Sub "wp_database_${Name}"
-      DBClusterIdentifier: !Sub "wp-database-${Name}"
-      DBSubnetGroupName: !Ref WordPressDatabaseSubnetGroup
+      DBClusterIdentifier: !Sub "wordpress-databasecluster-${Name}"
+      DBSubnetGroupName: !Ref WordPressDBSubnetGroup
       EnableHttpEndpoint: true
       Engine: aurora-mysql
       EngineMode: serverless
@@ -176,6 +182,9 @@ Resources:
         SecondsUntilAutoPause: 300
       VpcSecurityGroupIds:
         - !Ref WordPressDBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpress-databasecluster-${Name}"
 
   EC2WordPress:
     Type: AWS::EC2::Instance
@@ -186,7 +195,7 @@ Resources:
       SubnetId: !Ref PublicSubnetAZa   
       Tags:
         - Key: Name
-          Value: !Sub "EC2Wordpress-${Name}" 
+          Value: !Sub "wordpress-ec2instance-${Name}" 
       SecurityGroupIds:
         - !Ref EC2WordpressSecurityGroup
       UserData: 
