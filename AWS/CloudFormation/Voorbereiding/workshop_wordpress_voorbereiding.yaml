@@ -1,0 +1,140 @@
+# Voorbereiding
+# -------------
+# * MySQL database
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Voorbereiding"
+
+Parameters:
+
+  EC2InstanceType:
+    Description: Instance type for EC2 
+    Type: String
+    Default: t3.medium
+  EC2KeyName:
+    Description: Key name for EC2 
+    Type: String
+  DatabaseUserName:
+    Description: Generic username database
+    Type: String
+  DatabasePassword:
+    Description: Generic password database
+    Type: String
+
+  AmazonLinux2AMI: 
+    Description: Amazon Linux AMI
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-ebs
+
+Resources:
+
+  WordPressDatabaseVpc:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: "WordPressDatabaseVpc"
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: "InternetGateway-WordPressDatabase"
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref WordPressDatabaseVpc
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: "PublicRouteTableWordPressDatabase"
+      VpcId: !Ref WordPressDatabaseVpc
+  PublicWriteRoutePublicInternet:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetAZa:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Sub "${AWS::Region}a"
+      CidrBlock: 10.0.0.0/24
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref WordPressDatabaseVpc
+      Tags:
+        - Key: Name
+          Value: "PublicSubnetWordPressDatabaseAZa"
+  PublicSubnetAZaRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetAZa
+
+  EC2WordpressSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: EC2WordpressSecurityGroup
+      GroupDescription: "Securitygroup-WordPressDatabase"
+      VpcId: !Ref WordPressDatabaseVpc
+
+  EC2WordpressSecurityGroupIngressSSH:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EC2WordpressSecurityGroup
+      CidrIp: 0.0.0.0/0      
+      Description: SSH
+      FromPort: 22
+      ToPort: 22
+      IpProtocol: TCP
+
+  EC2WordpressSecurityGroupIngressMySQL:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EC2WordpressSecurityGroup
+      CidrIp: 0.0.0.0/0      
+      Description: SSH
+      FromPort: 3306
+      ToPort: 3306
+      IpProtocol: TCP
+
+  EC2WordPressDatabase:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmazonLinux2AMI 
+      InstanceType: !Ref EC2InstanceType
+      KeyName: !Ref EC2KeyName
+      SubnetId: !Ref PublicSubnetAZa   
+      Tags:
+        - Key: Name
+          Value: "EC2Wordpress-WordPressDatabase" 
+      SecurityGroupIds:
+        - !Ref EC2WordpressSecurityGroup
+      UserData: 
+        "Fn::Base64": !Sub |
+            #!/bin/bash
+
+            yum update -y
+            amazon-linux-extras install mariadb10.5 -y
+            systemctl enable --now mariadb
+            mysql -u root <<HERE
+            CREATE USER '${DatabaseUserName}'@'%' IDENTIFIED BY '${DatabasePassword}';
+            GRANT ALL PRIVILEGES ON *.* TO '${DatabaseUserName}'@'%' WITH GRANT OPTION;
+            FLUSH PRIVILEGES;
+            HERE
+            
+Outputs:
+  WordpressDatabasePublicIP:
+    Description: Public IP Address WordPress Database
+    Value: !Sub "Public IP Address: ${EC2WordPressDatabase.PublicIp}"
+  

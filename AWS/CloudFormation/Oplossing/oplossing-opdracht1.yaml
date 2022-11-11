@@ -1,0 +1,77 @@
+# oplossing-opdracht1.yml
+# =======================
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Oplossing opdracht 1"
+
+Parameters:
+
+  Name:
+    Type: String
+    Default: frederique
+
+Resources:
+
+  WordPressVpc:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: 10.0.0.0/16
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpress-vpc-${Name}"
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpress-igw-${Name}"
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref WordPressVpc
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpress-public-routetable-${Name}"
+      VpcId: !Ref WordPressVpc
+  PublicRoutePublicInternet:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetAZa:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Sub "${AWS::Region}a"
+      CidrBlock: 10.0.0.0/24
+      VpcId: !Ref WordPressVpc
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpress-public-subnet-aza-${Name}"
+  PublicSubnetAZaRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetAZa
+
+  PublicSubnetAZb:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Sub "${AWS::Region}b"
+      CidrBlock: 10.0.1.0/24
+      VpcId: !Ref WordPressVpc
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpress-public-subnet-azb-${Name}"
+  PublicSubnetAZbRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetAZb

@@ -1,0 +1,9 @@
+Parameters:
+  BucketNameParameter:
+    Type: String
+    Default: "demobucket20230101"
+Resources:
+  HelloBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Ref BucketNameParameter

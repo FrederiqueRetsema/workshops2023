@@ -1,0 +1,293 @@
+# oplossing-opdracht3.yml
+# =======================
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Oplossing opdracht 4"
+
+Parameters:
+
+  Name:
+    Type: String
+    Default: frederique
+  WordpressUserName:
+    Type: String
+    Default: '---vul-hier-het-user-id-van-de-database-in---'
+  WordpressPassword:
+    Type: String
+    Default: '---vul-hier-het-password-van-de-database-in---'
+    NoEcho: true
+
+  EC2InstanceType:
+    Description: Instance type for EC2 
+    Type: String
+    Default: t2.micro
+  EC2KeyName:
+    Description: Key name for EC2 
+    Type: String
+    Default: frederiquer-20221102
+
+  AmazonLinux2AMI: 
+    Description: Amazon Linux AMI
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-ebs
+
+Resources:
+
+  WordPressVpc:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: 10.0.0.0/16
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpress-vpc-${Name}"
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpress-igw-${Name}"
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref WordPressVpc
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpress-public-routetable-${Name}"
+      VpcId: !Ref WordPressVpc
+  PublicRoutePublicInternet:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetAZa:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Sub "${AWS::Region}a"
+      CidrBlock: 10.0.0.0/24
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref WordPressVpc
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpress-public-subnet-aza-${Name}"
+  PublicSubnetAZaRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetAZa
+
+  PublicSubnetAZb:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Sub "${AWS::Region}b"
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref WordPressVpc
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpress-public-subnet-azb-${Name}"
+  PublicSubnetAZbRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetAZb
+
+  EC2WordpressSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: EC2WordpressSecurityGroup
+      GroupDescription: !Sub "wordpress-sg-${Name}"
+      VpcId: !Ref WordPressVpc
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpress-sg-${Name}"
+
+  EC2WordpressSecurityGroupIngressSSH:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EC2WordpressSecurityGroup
+      CidrIp: 0.0.0.0/0      
+      Description: SSH
+      FromPort: 22
+      ToPort: 22
+      IpProtocol: TCP
+
+  EC2WordpressSecurityGroupIngressHTTP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EC2WordpressSecurityGroup
+      CidrIp: 0.0.0.0/0      
+      Description: SSH
+      FromPort: 80
+      ToPort: 80
+      IpProtocol: TCP
+
+  WordPressDBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: !Sub "wordpress-dbsubnetgroup-${Name}"
+      DBSubnetGroupName: !Sub "wordpress-dbsubnetgroup-${Name}"
+      SubnetIds:
+        - !Ref PublicSubnetAZa
+        - !Ref PublicSubnetAZb
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpress-dbsubnetgroup-${Name}"
+
+  WordPressDBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: WordPressDBSecurityGroup
+      GroupDescription: Securitygroup for the database
+      VpcId: !Ref WordPressVpc
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpress-dbsg-${Name}"
+
+  DatabaseSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref WordPressDBSecurityGroup
+      CidrIp: 10.0.0.0/0
+      Description: WordPress EC2 Server
+      FromPort: 3306
+      ToPort: 3306
+      IpProtocol: TCP
+
+  WordPressDatabaseCluster:
+    Type: AWS::RDS::DBCluster
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BackupRetentionPeriod: 7
+      DatabaseName: !Sub "wp_database_${Name}"
+      DBClusterIdentifier: !Sub "wordpress-databasecluster-${Name}"
+      DBSubnetGroupName: !Ref WordPressDBSubnetGroup
+      EnableHttpEndpoint: true
+      Engine: aurora-mysql
+      EngineMode: serverless
+      MasterUsername: !Ref WordpressUserName
+      MasterUserPassword: !Ref WordpressPassword
+      ScalingConfiguration:
+        AutoPause: true
+        MinCapacity: 1
+        MaxCapacity: 16
+        SecondsUntilAutoPause: 300
+      VpcSecurityGroupIds:
+        - !Ref WordPressDBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpress-databasecluster-${Name}"
+
+  EC2WordPress:
+    Type: AWS::EC2::Instance
+    CreationPolicy: 
+      ResourceSignal:
+        Timeout: PT15M
+    Metadata:
+      'AWS::CloudFormation::Init':
+        config:
+          packages:
+            yum:
+              tar: []
+              httpd: []
+              mariadb: []
+              php: []
+              php-cli: []
+              php-fpm: []
+              php-mysqlnd: []
+              php-devel: []
+              php-gd: []
+              php-mbstring: []
+              php-xml: []
+              php-pear: []
+              php-bcmath: []
+          files:
+            '/opt/install/download_wordpress_in_opt_wordpress.sh':
+              content: |
+                #!/bin/bash 
+
+                mkdir -p /opt/wordpress
+                cd /opt
+                curl -O https://wordpress.org/latest.tar.gz
+                tar -xzvf latest.tar.gz
+              mode: 000500
+
+            '/opt/install/change_wordpress_config_file.sh':
+              content: |
+                #!/bin/bash
+
+                cp wp-config-sample.php wp-config.php
+                sed "s/database_name_here/$WORDPRESS_DATABASE_NAME/g" -i wp-config.php
+                sed "s/username_here/$WORDPRESS_USERNAME/g" -i wp-config.php
+                sed "s/password_here/$WORDPRESS_PASSWORD/g" -i wp-config.php
+                sed "s/localhost/$WORDPRESS_DATABASE_SERVER_ENDPOINT/g" -i wp-config.php
+              mode: 000500
+
+          commands:
+            01-download-wordpress-in-opt-wordpress:
+              command: /opt/install/download_wordpress_in_opt_wordpress.sh
+              ignoreErrors: true
+            02-change_wordpress_config_file:
+              cwd: /opt/wordpress
+              command: /opt/install/change_wordpress_config_file.sh
+              env:
+                WORDPRESS_DATABASE_NAME: !Sub "wp_database_${Name}"
+                WORDPRESS_USERNAME: !Ref WordpressUserName
+                WORDPRESS_PASSWORD: !Ref WordpressPassword
+                WORDPRESS_DATABASE_SERVER_ENDPOINT: !GetAtt WordPressDatabaseCluster.Endpoint.Address
+              ignoreErrors: true
+            03-copy-files-to-var-www-html:
+              command: cp -p -r /opt/wordpress/* $WWW_DIR
+              env:
+                WWW_DIR: "/var/www/html"
+              ignoreErrors: true
+
+          services:
+            systemd:
+              httpd:
+                enabled: true
+                ensureRunning: true
+                packages:
+                  yum:
+                    - httpd
+                    - php
+                    - php-cli
+                    - php-fpm
+                    - php-mysqlnd
+                    - php-devel
+                    - php-gd
+                    - php-mbstring
+                    - php-xml
+                    - php-pear
+                    - php-bcmath
+    Properties:
+      ImageId: !Ref AmazonLinux2AMI 
+      InstanceType: !Ref EC2InstanceType
+      KeyName: !Ref EC2KeyName
+      SubnetId: !Ref PublicSubnetAZa   
+      Tags:
+        - Key: Name
+          Value: !Sub "wordpress-ec2instance-${Name}" 
+      SecurityGroupIds:
+        - !Ref EC2WordpressSecurityGroup
+      UserData: 
+        "Fn::Base64": !Sub |
+            #!/bin/bash
+
+            yum update -y
+            amazon-linux-extras install php8.0 -y
+            /opt/aws/bin/cfn-init --verbose --stack ${AWS::StackName} --resource EC2WordPress --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal --exit-code $? --stack ${AWS::StackName} --resource EC2WordPress --region ${AWS::Region}
+
+Outputs:
+  WordpressPublicIP:
+    Description: Public IP Address WordPress
+    Value: !Sub "Public IP Address: ${EC2WordPress.PublicIp}"
