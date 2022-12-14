@@ -1,0 +1,21 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "value": "West Europe"
+        },
+        "name": {
+            "value": "frederique"
+        },
+        "WordpressUserName": {
+            "value": "---vul-hier-het-user-id-van-de-database-in---"
+        },
+        "WordpressPassword": {
+            "value": "---vul-hier-het-password-van-de-database-in---"
+        },
+        "WordpressEndpoint": {
+            "value": "---vul-hier-het-ip-adres-van-de-database-in---"
+        }
+    }
+}

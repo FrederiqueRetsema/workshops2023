@@ -1,0 +1,47 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "defaultValue": "West Europe"
+        }
+    },
+    "resources": [
+          {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2022-05-01",
+            "name": "wordpress-vnet-frederique",
+            "location": "[parameters('location')]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/16"
+                    ]
+                }
+            }
+        },
+        {
+          "type": "Microsoft.Network/virtualNetworks/subnets",
+          "apiVersion": "2022-05-01",
+          "name": "wordpress-vnet-frederique/subnet-1')]",
+          "dependsOn": [
+            "wordpress-vnet-frederique"
+          ],
+          "properties": {
+            "addressPrefix": "10.0.0.0/24"
+          }
+        },
+        {
+          "type": "Microsoft.Network/virtualNetworks/subnets",
+          "apiVersion": "2022-05-01",
+          "name": "wordpress-vnet-frederique/subnet-2')]",
+          "dependsOn": [
+            "wordpress-vnet-frederique"
+          ],
+          "properties": {
+            "addressPrefix": "10.0.1.0/24"
+          }
+        }
+    ]
+}

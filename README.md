@@ -6,17 +6,9 @@ Het gaat om de volgende workshops:
 
 ## AWS
 - CloudFormation (februari 2023)
-- CDK (april 2023)
-- Terraform (juni 2023)
-- Packer (september 2023)
-- Cloud Custodian (november 2023)
 
 ## Azure
 - ARM Templates (februari 2023)
-- Biceps (onder voorbehoud, april 2023)
-- Terraform (juni 2023)
-- Packer (september 2023)
-- Cloud Custodian (november 2023)
 
 ## Zelf een van deze presentaties geven
 

@@ -1,0 +1,23 @@
+"functions": [
+    {
+      "namespace": "wordpress",
+      "members": {
+        "resourcename": {
+          "parameters": [
+            {
+              "name": "resourceType",
+              "type": "string"
+            },
+            {
+                "name": "name",
+                "type": "string"
+              },
+            ],
+          "output": {
+            "type": "string",
+            "value": "[concat('wordpress-', parameters('resourceType'), '-', parameters('name'))]"
+          }
+        }
+      }
+    }
+  ]
